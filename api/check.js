@@ -1,6 +1,6 @@
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
+        return res.status(200).json({ responseCode: 405, responseMessage: 'Method Not Allowed' });
     }
     
     const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYjY0M2FhNzQyYTM5NGNlZSJ9LCJpYXQiOjE3ODE5NjM3NzMsImV4cCI6MTc4OTczOTc3M30.Asg2Ft8BODXsQhOzE8UHB8kN_BG_ZJItBI1N91xHYV0";
@@ -19,6 +19,10 @@ module.exports = async (req, res) => {
         const data = await response.json();
         return res.status(200).json(data);
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        // បម្លែងកំហុសពី Server មកជា JSON ធម្មតាដើម្បីបង្ហាញលើអេក្រង់
+        return res.status(200).json({ 
+            responseCode: 500, 
+            responseMessage: "Server Error: " + error.message 
+        });
     }
 };

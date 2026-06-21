@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bakong Real-time Payment Tracker</title>
+    <title>BIDC Bank Payments with Direct Tracker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * {
@@ -34,29 +34,34 @@
 
         .logo {
             font-weight: bold;
-            color: #d32f2f;
-            font-size: 22px;
-            margin-bottom: 20px;
+            color: #003b95;
+            font-size: 24px;
+            letter-spacing: 1px;
+        }
+
+        .sub-logo {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
         }
 
         .amount-container {
-            background-color: #fdf2f2;
+            background-color: #f0f4fa;
             border-radius: 12px;
             padding: 16px;
             margin: 20px 0;
-            border: 1px solid #fbcaca;
+            border: 1px solid #b3d1ff;
         }
 
         .amount-label {
             font-size: 13px;
-            color: #777;
-            margin-bottom: 6px;
+            color: #555;
         }
 
         .amount-display {
-            font-size: 28px;
+            font-size: 30px;
             font-weight: bold;
-            color: #d32f2f;
+            color: #003b95;
         }
 
         .row {
@@ -91,13 +96,18 @@
         .btn-generate {
             width: 100%;
             padding: 14px;
-            background-color: #d32f2f;
+            background-color: #003b95;
             color: #fff;
             border: none;
             border-radius: 8px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-generate:hover {
+            background-color: #002663;
         }
 
         .qr-section {
@@ -158,19 +168,6 @@
             color: #555;
         }
 
-        .error-box {
-            display: none;
-            margin-top: 20px;
-            padding: 12px;
-            background-color: #ffebee;
-            border: 1px solid #ffcdd2;
-            border-radius: 8px;
-            color: #c62828;
-            font-size: 12px;
-            text-align: left;
-            word-break: break-all;
-        }
-
         @keyframes scaleUp {
             from { transform: scale(0.8); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
@@ -179,9 +176,11 @@
 </head>
 <body>
 
-    <div class="payment-card" id="cardContent">
+    <div class="payment-card">
         <div id="paymentForm">
-            <div class="logo">KHQR REAL-TIME</div>
+            <div class="logo">BIDC BANK KHQR</div>
+            <div class="sub-logo">ម្ចាស់គណនី៖ HORT SAOMONA</div>
+            
             <div class="amount-container">
                 <div class="amount-label">ទឹកប្រាក់ផ្ទេរចូល</div>
                 <div class="amount-display" id="totalDisplay">$0.00</div>
@@ -201,7 +200,7 @@
                 </div>
             </div>
 
-            <button class="btn-generate" onclick="generatePaymentQR()">បង្កើត QR Code ទូទាត់</button>
+            <button class="btn-generate" onclick="generatePaymentQR()">បង្កើត QR Code</button>
         </div>
 
         <div class="qr-section" id="qrSection">
@@ -216,8 +215,6 @@
             <div class="success-title">ទូទាត់ជោគជ័យ!</div>
             <div class="success-desc" id="successDesc">លោកអ្នកបានផ្ទេរប្រាក់រួចរាល់។</div>
         </div>
-
-        <div class="error-box" id="errorBox"></div>
     </div>
 
     <script>
@@ -239,7 +236,22 @@
             }
         }
 
-        async function generatePaymentQR() {
+        function getCRC16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) {
+                crc ^= (data.charCodeAt(i) << 8);
+                for (let j = 0; j < 8; j++) {
+                    if ((crc & 0x8000) !== 0) {
+                        crc = (crc << 1) ^ 0x1021;
+                    } else {
+                        crc <<= 1;
+                    }
+                }
+            }
+            return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        function generatePaymentQR() {
             const amountInput = document.getElementById('amountInput').value;
             const currency = document.getElementById('currencySelect').value;
             const amount = parseFloat(amountInput);
@@ -252,72 +264,59 @@
             const qrSection = document.getElementById('qrSection');
             const qrCodeDiv = document.getElementById('qrcode');
             const paymentForm = document.getElementById('paymentForm');
-            const errorBox = document.getElementById('errorBox');
 
             qrCodeDiv.innerHTML = '';
-            errorBox.style.display = 'none';
             clearInterval(checkPaymentInterval);
 
-            try {
-                // ហៅទៅកាន់ Vercel Serverless Function (Backend ផ្ទាល់ខ្លួន)
-                const response = await fetch("/api/generate", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        amount: amount,
-                        currency: currency
-                    })
-                });
+            // កូដគំរូធនាគារ BIDC Bank ផ្លូវការរបស់បង
+            let rawQR = "00020101021129490016idbckhppxxx@idbc01127037007971050209BIDC BANK52045999";
+            
+            let currencyCode = currency === "KHR" ? "116" : "840";
+            rawQR += "5303" + currencyCode;
+            rawQR += "5802KH";
+            rawQR += "5912HORT SAOMONA";
+            rawQR += "6009BIDC BANK";
+            rawQR += "6304";
+            
+            const crc = getCRC16(rawQR);
+            const finalQRString = rawQR + crc;
 
-                const data = await response.json();
+            paymentForm.style.display = 'none';
+            qrSection.style.display = 'flex';
 
-                if (response.ok && data.responseCode === 0) {
-                    paymentForm.style.display = 'none';
-                    qrSection.style.display = 'flex';
+            new QRCode(qrCodeDiv, {
+                text: finalQRString,
+                width: 180,
+                height: 180,
+                correctLevel: QRCode.CorrectLevel.M
+            });
 
-                    new QRCode(qrCodeDiv, {
-                        text: data.data.qrCode,
-                        width: 180,
-                        height: 180,
-                        correctLevel: QRCode.CorrectLevel.M
-                    });
-
-                    checkPaymentInterval = setInterval(() => {
-                        trackPaymentStatus(data.data.md5, amount, currency);
-                    }, 2500);
-
-                } else {
-                    throw new Error(data.responseMessage || `Error Code: ${data.responseCode}`);
-                }
-
-            } catch (error) {
-                console.error(error);
-                errorBox.style.display = 'block';
-                errorBox.innerText = "ការស្នើសុំបង្កើត QR បរាជ័យ៖ " + error.message;
-            }
+            // 🔄 ចាប់ផ្តើមឆែកស្ថានភាពលុយចូលរៀងរាល់ ២ វិនាទីម្តង
+            checkPaymentInterval = setInterval(() => {
+                trackPaymentStatus(amount, currency);
+            }, 2000);
         }
 
-        async function trackPaymentStatus(md5Hash, amount, currency) {
+        async function trackPaymentStatus(amount, currency) {
             try {
-                const response = await fetch("/api/check", {
+                // ហៅទៅកាន់ API របស់ Vercel ផ្ទាល់ខ្លួនដើម្បីឆែកមើលស្ថានភាព
+                const response = await fetch("/api/check_payment", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ md5: md5Hash })
+                    body: JSON.stringify({ amount: amount })
                 });
 
                 if (response.ok) {
                     const statusData = await response.json();
-                    if (statusData.responseCode === 0) {
+                    if (statusData.success === true) {
                         clearInterval(checkPaymentInterval);
                         showSuccessScreen(amount, currency);
                     }
                 }
             } catch (error) {
-                console.error("កំពុងឆែកស្ថានភាព...", error);
+                console.error("កំពុងរង់ចាំការទូទាត់...", error);
             }
         }
 

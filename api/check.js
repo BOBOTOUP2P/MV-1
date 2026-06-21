@@ -11,7 +11,11 @@ module.exports = async (req, res) => {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${TOKEN}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                // បន្ថែមព័ត៌មានបន្លំខ្លួនជា Browser Google Chrome លើ Windows 10
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json',
+                'Referer': 'https://api-bakong.nbc.gov.kh/'
             },
             body: JSON.stringify({ md5: md5 })
         });
@@ -19,7 +23,6 @@ module.exports = async (req, res) => {
         const data = await response.json();
         return res.status(200).json(data);
     } catch (error) {
-        // បម្លែងកំហុសពី Server មកជា JSON ធម្មតាដើម្បីបង្ហាញលើអេក្រង់
         return res.status(200).json({ 
             responseCode: 500, 
             responseMessage: "Server Error: " + error.message 

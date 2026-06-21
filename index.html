@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bakong Real-time Payment Tracker (Debug Mode)</title>
-    <!-- បញ្ចូលបណ្ណាល័យ QRCode.js -->
+    <title>Bakong Real-time Payment Tracker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * {
@@ -31,7 +30,6 @@
             max-width: 380px;
             padding: 24px;
             text-align: center;
-            position: relative;
         }
 
         .logo {
@@ -102,10 +100,6 @@
             cursor: pointer;
         }
 
-        .btn-generate:hover {
-            background-color: #b71c1c;
-        }
-
         .qr-section {
             margin-top: 24px;
             display: none;
@@ -164,7 +158,6 @@
             color: #555;
         }
 
-        /* ប្រអប់បង្ហាញសារកំហុសលម្អិត */
         .error-box {
             display: none;
             margin-top: 20px;
@@ -224,18 +217,10 @@
             <div class="success-desc" id="successDesc">លោកអ្នកបានផ្ទេរប្រាក់រួចរាល់។</div>
         </div>
 
-        <!-- បន្ថែមប្រអប់ទាញយកសារកំហុសមកបង្ហាញនៅលើអេក្រង់ -->
         <div class="error-box" id="errorBox"></div>
     </div>
 
     <script>
-        const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYjY0M2FhNzQyYTM5NGNlZSJ9LCJpYXQiOjE3ODE5NjM3NzMsImV4cCI6MTc4OTczOTc3M30.Asg2Ft8BODXsQhOzE8UHB8kN_BG_ZJItBI1N91xHYV0";
-        const BAKONG_ACC = "saomona_hort@bkrt";
-        
-        const PROXY_URL = "https://corsproxy.io/?";
-        const GENERATE_API = PROXY_URL + encodeURIComponent("https://api-bakong.nbc.gov.kh/v1/generate_qr");
-        const CHECK_STATUS_API = PROXY_URL + encodeURIComponent("https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5");
-
         let checkPaymentInterval = null;
 
         function updateDisplay() {
@@ -273,33 +258,20 @@
             errorBox.style.display = 'none';
             clearInterval(checkPaymentInterval);
 
-            const requestBody = {
-                qrType: "individual",
-                accountId: BAKONG_ACC,
-                amount: currency === "KHR" ? Math.round(amount) : parseFloat(amount),
-                currency: currency
-            };
-
             try {
-                const response = await fetch(GENERATE_API, {
+                // ហៅទៅកាន់ Vercel Serverless Function (Backend ផ្ទាល់ខ្លួន)
+                const response = await fetch("/api/generate", {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${TOKEN}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify({
+                        amount: amount,
+                        currency: currency
+                    })
                 });
 
-                // ទាញយកអត្ថបទឆ្លើយតបឆៅពីម៉ាស៊ីនមេដើម្បីពិនិត្យកំហុស
-                const rawText = await response.text();
-                console.log("Response:", rawText);
-
-                let data;
-                try {
-                    data = JSON.parse(rawText);
-                } catch (e) {
-                    throw new Error("Proxy ឬ Server របស់បាគងបានផ្ញើសារកំហុសមកថា៖ " + rawText.substring(0, 150));
-                }
+                const data = await response.json();
 
                 if (response.ok && data.responseCode === 0) {
                     paymentForm.style.display = 'none';
@@ -322,7 +294,6 @@
 
             } catch (error) {
                 console.error(error);
-                // បង្ហាញសារកំហុសលម្អិតនៅលើអេក្រង់
                 errorBox.style.display = 'block';
                 errorBox.innerText = "ការស្នើសុំបង្កើត QR បរាជ័យ៖ " + error.message;
             }
@@ -330,10 +301,9 @@
 
         async function trackPaymentStatus(md5Hash, amount, currency) {
             try {
-                const response = await fetch(CHECK_STATUS_API, {
+                const response = await fetch("/api/check", {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${TOKEN}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ md5: md5Hash })
